@@ -98,10 +98,11 @@ internal static class SelfTest
             Check(Path.GetDirectoryName(Settings.KeyPath) == Settings.PortableDirectory && Path.GetDirectoryName(Settings.FilePath) == Settings.PortableDirectory, "Key and settings live beside executable");
             string ledgerPath = Path.Combine(directory, "usage-fixture.json");
             if (File.Exists(ledgerPath)) File.Delete(ledgerPath);
-            var ledger = new UsageStore(ledgerPath); var paid = ledger.Start("Text", "test/model", 12); paid.Id = "fixture-id"; paid.Cost = .0000123456789m; paid.Status = "Hotovo"; ledger.Update(paid);
+            var ledger = new UsageStore(ledgerPath); var paid = ledger.Start("Text", "test/model", 12); paid.DurationMilliseconds = 1234; paid.Id = "fixture-id"; paid.Cost = .0000123456789m; paid.Status = "Hotovo"; ledger.Update(paid);
             var unknown = ledger.Start("Audio", "test/voice", 20); unknown.Status = "Zrušené"; ledger.Update(unknown);
             var restored = new UsageStore(ledgerPath).Snapshot();
             Check(restored.Length == 2 && restored.Sum(b => b.Cost ?? 0) == .0000123456789m && restored.Count(b => b.Cost is null) == 1, "Portable usage history survives restart with exact costs and explicit unknown billing");
+            Check(restored[0].DurationMilliseconds == 1234 && restored[1].DurationMilliseconds is null && UsageView.Duration(null) == "—" && UsageView.Duration(1234) == "1,2 s", "Timing persists and missing historical durations remain unknown");
             Check(!File.ReadAllText(ledgerPath).Contains("test-secret") && restored[0].Characters == 12 && restored[0].Id == "fixture-id", "Usage journal records only metadata, no input text or API key");
             File.WriteAllText(ledgerPath, "broken");
             Check(new UsageStore(ledgerPath).Warning is not null && File.ReadAllText(ledgerPath) == "broken", "Damaged usage history is preserved and reported");
@@ -118,7 +119,7 @@ internal static class SelfTest
                 return new(HttpStatusCode.OK) { Content = new StringContent("{\"id\":\"test\",\"choices\":[{\"finish_reason\":\"stop\",\"message\":{\"content\":\"Žltý kôň\"}}],\"usage\":{\"cost\":0.0001234567}}") };
             }))) {
                 Bill? bill = null; string prepared = await fake.Prepare("Žltý kôň", new(), "test-key", b => bill = b, CancellationToken.None);
-                Check(prepared == "Žltý kôň" && bill?.Cost == .0001234567m, "Prepared text and exact decimal usage cost retained");
+                Check(prepared == "Žltý kôň" && bill?.Cost == .0001234567m && bill.DurationMilliseconds.HasValue, "Prepared text and exact decimal usage cost retained");
             }
             int attempts = 0;
             using (var denied = new Api(new Handler((_, _) => { attempts++; return Task.FromResult(new HttpResponseMessage(HttpStatusCode.BadRequest) { Content = new StringContent("{\"error\":{\"message\":\"test-secret\"}}") }); }))) {
@@ -164,7 +165,7 @@ internal static class SelfTest
                 var tab = (TabItem)((TabControl)window.Content).Items[1];
                 var view = (UsageView)((ScrollViewer)tab.Content).Content;
                 var grid = view.Children.OfType<DataGrid>().Single();
-                grid.ItemsSource = Enumerable.Range(1, 30).Select(i => new { Time = "21.10. 12:00:00", Kind = "Audio", Model = "Ukážka · model", Cost = "$0.001", State = "Ukážkový záznam" }).ToArray();
+                grid.ItemsSource = Enumerable.Range(1, 30).Select(i => new { Time = "21.10. 12:00:00", Kind = "Audio", Model = "Ukážka · model", Duration = "2,4 s", Cost = "$0.001", State = "Ukážkový záznam" }).ToArray();
             }
             SampleUsage(usageWindow);
             Render(usageWindow, Path.Combine(directory, "usage-preview.png"), 650, Check);

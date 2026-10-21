@@ -30,6 +30,7 @@ internal sealed record Bill(string Kind, string Model, string? Id)
     public DateTimeOffset At { get; init; } = DateTimeOffset.UtcNow;
     public int Characters { get; init; }
     public decimal? Cost { get; set; }
+    public long? DurationMilliseconds { get; set; }
     public string Provider { get; set; } = "OpenRouter";
     public string Status { get; set; } = "Hotovo";
 }
@@ -71,6 +72,7 @@ internal sealed class Api : IApi, IDisposable
     {
         token.ThrowIfCancellationRequested();
         var bill = usage?.Start("Text", s.TextModel, input.Length) ?? new Bill("Text", s.TextModel, null);
+        var elapsed = System.Diagnostics.Stopwatch.StartNew();
         try {
         using var response = await Post("chat/completions", new { model = s.TextModel, stream = false, max_tokens = 8000,
             messages = new[] { new { role = "system", content = PreparationPrompt.Prompt }, new { role = "user", content = input } } }, key, token);
@@ -87,13 +89,14 @@ internal sealed class Api : IApi, IDisposable
         bill.Status = "Hotovo"; return text;
         } catch (OperationCanceledException) { bill.Status = "Zrušené / časový limit"; throw; }
         catch { bill.Status = "Chyba"; throw; }
-        finally { usage?.Update(bill); }
+        finally { bill.DurationMilliseconds = elapsed.ElapsedMilliseconds; usage?.Update(bill); }
     }
     public async Task<AudioData> Speak(string input, Settings s, string key, CancellationToken token)
     {
         token.ThrowIfCancellationRequested();
         if (s.InternalSpeech) return await SpeakInternal(input, s.InternalLanguage, token);
         var bill = usage?.Start("Audio", s.SpeechModel, input.Length) ?? new Bill("Audio", s.SpeechModel, null);
+        var elapsed = System.Diagnostics.Stopwatch.StartNew();
         try {
         bool pcm = s.SpeechModel.StartsWith("google/gemini-", StringComparison.Ordinal);
         var body = new Dictionary<string, object> { ["model"] = s.SpeechModel, ["input"] = input, ["voice"] = s.Voice, ["response_format"] = pcm ? "pcm" : "mp3" };
@@ -113,13 +116,14 @@ internal sealed class Api : IApi, IDisposable
         bill.Status = "Hotovo"; return new(bytes, pcm ? "wav" : "mp3", bill);
         } catch (OperationCanceledException) { bill.Status = "Zrušené / časový limit"; throw; }
         catch { bill.Status = "Chyba"; throw; }
-        finally { usage?.Update(bill); }
+        finally { bill.DurationMilliseconds = elapsed.ElapsedMilliseconds; usage?.Update(bill); }
     }
     async Task<AudioData> SpeakInternal(string input, string language, CancellationToken token)
     {
         if (string.IsNullOrWhiteSpace(input) || input.Length > 5000) throw new InvalidOperationException("Interný model: text musí obsahovať 1 až 5000 znakov.");
         if (language is not ("sk" or "en")) throw new InvalidOperationException("Interný model podporuje slovenčinu a angličtinu.");
         var bill = usage?.Start("Audio", "internal/omnivoice", input.Length, "Interný model") ?? new Bill("Audio", "internal/omnivoice", null);
+        var elapsed = System.Diagnostics.Stopwatch.StartNew();
         bill.Provider = "Interný model";
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(token);
         timeout.CancelAfter(TimeSpan.FromSeconds(180));
@@ -154,7 +158,7 @@ internal sealed class Api : IApi, IDisposable
         catch (JsonException ex) { bill.Status = "Chyba"; throw new InvalidOperationException("Interný model vrátil neplatný JSON.", ex); }
         catch (HttpRequestException ex) { bill.Status = "Chyba"; throw new InvalidOperationException("Interný model nie je dostupný alebo zlyhalo spojenie.", ex); }
         catch { bill.Status = "Chyba"; throw; }
-        finally { usage?.Update(bill); }
+        finally { bill.DurationMilliseconds = elapsed.ElapsedMilliseconds; usage?.Update(bill); }
     }
     internal static byte[] WrapPcm(byte[] pcm, int rate, short channels)
     {

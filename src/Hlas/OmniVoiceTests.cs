@@ -23,6 +23,7 @@ internal static class OmniVoiceTests
         var usage = new UsageStore(path); int calls = 0;
         using var api = new Api(new Handler(async (request, token) => {
             calls++;
+            await Task.Delay(25, token);
             check(request.Headers.Authorization is null && request.RequestUri!.Host == "ai.vaskop.me", "OmniVoice never receives OpenRouter credentials");
             if (request.Method == HttpMethod.Post) {
                 check(request.RequestUri!.AbsoluteUri == "https://ai.vaskop.me/transcribe/?mode=speech", "OmniVoice POST endpoint");
@@ -38,6 +39,7 @@ internal static class OmniVoiceTests
         }), usage);
         var audio = await api.Speak("Žltý kôň.", settings, "secret-not-to-send", CancellationToken.None);
         check(calls == 2 && audio.Extension == "mp3" && audio.Bill.Provider == "Interný model" && audio.Bill.Cost is null && audio.Bill.Id is null, "Internal MP3 returned with explicit unavailable cost");
+        check(audio.Bill.DurationMilliseconds >= 40 && new UsageStore(path).Snapshot().Single().DurationMilliseconds == audio.Bill.DurationMilliseconds, "Internal conversion duration includes generation and download and survives restart");
         check(new UsageStore(path).Snapshot().Single().Provider == "Interný model", "Internal provider survives usage journal reload");
         foreach (string response in new[] { "not json", "{\"ok\":false}", "{\"ok\":\"true\"}", "{\"ok\":true}", "{\"ok\":true,\"audio\":{\"url\":\"https://other.example/a.mp3\"}}" }) {
             int attempts = 0;

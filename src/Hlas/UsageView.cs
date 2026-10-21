@@ -37,14 +37,15 @@ internal sealed class UsageView : StackPanel
         rows.Height = 250; rows.RowHeight = 31; rows.FontSize = 11;
         var header = new Style(typeof(DataGridColumnHeader)); header.Setters.Add(new Setter(Control.BackgroundProperty, new DynamicResourceExtension("Selected"))); header.Setters.Add(new Setter(Control.ForegroundProperty, new DynamicResourceExtension("Text"))); header.Setters.Add(new Setter(Control.PaddingProperty, new Thickness(7))); rows.ColumnHeaderStyle = header;
         void Column(string label, string field, double width) => rows.Columns.Add(new DataGridTextColumn { Header = label, Binding = new Binding(field), Width = width });
-        Column("Kedy", "Time", 115); Column("Typ", "Kind", 50); Column("Model", "Model", 190); Column("Cena USD", "Cost", 125); Column("Stav", "State", 140);
+        Column("Kedy", "Time", 115); Column("Typ", "Kind", 50); Column("Model", "Model", 190); Column("Čas prevodu", "Duration", 95); Column("Cena USD", "Cost", 125); Column("Stav", "State", 140);
         Children.Add(rows);
-        var note = Ui.Text("Ukladá sa dátum, model, počet znakov a cena. Text zo schránky ani API kľúč nie sú súčasťou histórie. Prehľad zahŕňa iba volania z tejto aplikácie.", 11, Ui.Muted); note.TextWrapping = TextWrapping.Wrap; note.Margin = new Thickness(0, 14, 0, 0); Children.Add(note);
+        var note = Ui.Text("Čas prevodu zahŕňa čakanie na službu a získanie výsledku, pri audiu aj stiahnutie. Nejde o dĺžku nahrávky. Pomlčka znamená, že sa čas nemeral. Text zo schránky ani API kľúč nie sú súčasťou histórie. Prehľad zahŕňa iba volania z tejto aplikácie.", 11, Ui.Muted); note.TextWrapping = TextWrapping.Wrap; note.Margin = new Thickness(0, 14, 0, 0); Children.Add(note);
         timer.Tick += (_, _) => { if (IsVisible) Refresh(); };
         Loaded += (_, _) => { timer.Start(); Refresh(); }; Unloaded += (_, _) => timer.Stop();
         Refresh();
     }
     static string Money(decimal amount) => "$" + amount.ToString("0.############################", CultureInfo.InvariantCulture);
+    internal static string Duration(long? milliseconds) => milliseconds is null ? "—" : (milliseconds.Value / 1000d).ToString("0.0", CultureInfo.GetCultureInfo("sk-SK")) + " s";
     internal void Refresh()
     {
         var items = app.Usage.Snapshot(); var now = DateTime.Now;
@@ -63,6 +64,6 @@ internal sealed class UsageView : StackPanel
             row.Margin = new Thickness(0, 3, 0, 3); row.TextWrapping = TextWrapping.Wrap; models.Children.Add(row);
         }
         if (items.Length == 0) models.Children.Add(Ui.Text("Zatiaľ žiadne volania.", 12, Ui.Muted));
-        rows.ItemsSource = items.OrderByDescending(b => b.At).Take(100).Select(b => new { Time = b.At.LocalDateTime.ToString("dd.MM. HH:mm:ss"), b.Kind, b.Model, Cost = b.Cost.HasValue ? Money(b.Cost.Value) : b.Provider != "OpenRouter" ? "interný · bez ceny" : "nezistená", State = b.Status }).ToArray();
+        rows.ItemsSource = items.OrderByDescending(b => b.At).Take(100).Select(b => new { Time = b.At.LocalDateTime.ToString("dd.MM. HH:mm:ss"), b.Kind, b.Model, Duration = Duration(b.DurationMilliseconds), Cost = b.Cost.HasValue ? Money(b.Cost.Value) : b.Provider != "OpenRouter" ? "interný · bez ceny" : "nezistená", State = b.Status }).ToArray();
     }
 }

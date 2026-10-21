@@ -41,6 +41,8 @@ Interné volania sa evidujú ako internal/omnivoice. Server cenu nevracia, takž
 
 Karta **Použitie a ceny** ukazuje celkové zistené náklady, dnešok, aktuálny mesiac, rozdelenie text/audio, modely a posledných 100 volaní. Súčet zahŕňa celú uloženú históriu. Ide o použitie tejto aplikácie, nie celého účtu OpenRouter.
 
+Stĺpec **Čas prevodu** uvádza čas konkrétneho volania v sekundách, od začiatku požiadavky po získanie výsledku vrátane stiahnutia audia. Meria sa pre prípravu textu aj oboch hlasových poskytovateľov a ukladá sa aj pri chybe alebo zrušení. Pri delení textu ide o jednotlivé časti, nie súčet celej nahrávky; čas prehrávania sa nezapočítava. Staršie záznamy bez merania majú pomlčku.
+
 Ceny sú presné desatinné údaje `usage.cost` alebo `generation.data.total_cost`. Nedostupná cena nie je nula; nezistené volania sú viditeľne uvedené mimo súčtu. Zrušené a chybové volania zostávajú v histórii. Oneskorené ceny sa overujú na pozadí; tlačidlo **Dočítať chýbajúce ceny** kontroluje najnovších 100 nezistených ID bez opakovania plateného generovania. Po zmene API kľúča nemusia byť staršie ID prístupné. História neobsahuje text zo schránky ani kľúč.
 
 ## Aktualizácie
