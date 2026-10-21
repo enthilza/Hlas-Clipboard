@@ -1,0 +1,9 @@
+.build/
+dist/
+test-results/
+release-repo/
+*.api
+*.key
+*.dpapi
+hlas.settings.json
+hlas.usage.json*
