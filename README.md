@@ -27,6 +27,16 @@ Vedľa EXE sú prenosné používateľské súbory:
 
 Prenášaj celý priečinok. Používateľské súbory nie sú súčasťou verejného vydania. Voľba spustenia pri prihlásení zapisuje aktuálnu cestu do Windows; po presunutí aplikácie ju znova ulož v nastaveniach. Priečinok aplikácie musí povoľovať zápis. Prázdny API kľúč nevyvolá platené volanie. Schránka sa číta iba na výslovnú skratku alebo príkaz z menu a nemení sa.
 
+## Interný model · OmniVoice
+
+V nastaveniach zapni **Interný model · OmniVoice** a vyber **Slovenčina** alebo **English**. Predvolene ostáva OpenRouter. Voľbu potvrď uložením nastavení. Interný server používa automatický hlas a MP3; model ani hlas sa do požiadavky neposielajú.
+
+Príprava textu je nezávislá voľba a stále používa OpenRouter. Ak ju vypneš, interné čítanie nepotrebuje žiadny API kľúč. Ak je zapnutá, potrebuješ OpenRouter kľúč a príprava sa účtuje podľa zvoleného textového modelu.
+
+Aplikácia odošle multipart POST na https://ai.vaskop.me/transcribe/?mode=speech s poľami action=speech, text a language=sk/en, potom z úspešného JSON stiahne MP3 z audio.url. Relatívna adresa sa vyhodnocuje voči https://ai.vaskop.me/transcribe/; audio sa sťahuje iba z toho istého HTTPS servera. Limit jednej požiadavky je 5000 znakov; aplikácia zachováva kratšie časti a neobmedzuje celý dokument. Časový limit prevodu a stiahnutia spolu je 180 sekúnd. Zastaviť ruší aj sieťové čakanie. Chyba nikdy nevyvolá automatický platený náhradný prevod.
+
+Interné volania sa evidujú ako internal/omnivoice. Server cenu nevracia, takže sú označené bez ceny a mimo finančných súčtov. Nejde o tvrdenie, že prevádzka servera je zadarmo. Vývojový prepínač --internal-live-test <report.json> vykoná jeden krátky prevod pevného slovenského textu; bežný build ho nespúšťa.
+
 ## Použitie a ceny
 
 Karta **Použitie a ceny** ukazuje celkové zistené náklady, dnešok, aktuálny mesiac, rozdelenie text/audio, modely a posledných 100 volaní. Súčet zahŕňa celú uloženú históriu. Ide o použitie tejto aplikácie, nie celého účtu OpenRouter.

@@ -15,6 +15,10 @@ public sealed record Settings
     public bool PrepareText { get; set; } = true;
     public bool AutoStart { get; set; }
     public bool LightTheme { get; set; }
+    public bool InternalSpeech { get; set; }
+    public string InternalLanguage { get; set; } = "sk";
+    [System.Text.Json.Serialization.JsonIgnore]
+    public bool RequiresOpenRouter => !InternalSpeech || PrepareText;
     public uint Modifiers { get; set; } = 3;
     public uint Key { get; set; } = 86;
     public double Speed { get; set; } = 1;
@@ -31,6 +35,7 @@ public sealed record Settings
             var s = JsonSerializer.Deserialize<Settings>(File.ReadAllText(FilePath)) ?? new();
             if (!double.IsFinite(s.Speed)) s.Speed = 1;
             s.Speed = Math.Clamp(s.Speed, .5, 2);
+            if (s.InternalLanguage is not ("sk" or "en")) s.InternalLanguage = "sk";
             if (!Native.ValidHotkey(s.Modifiers, s.Key)) { s.Modifiers = 3; s.Key = 86; }
             return s;
         } catch { return new(); }

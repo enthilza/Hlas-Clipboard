@@ -16,6 +16,8 @@ internal sealed class SettingsWindow : Window
     readonly CheckBox prepare = new() { Content = "Pred čítaním upraviť text na hovorenú reč" }, startup = new() { Content = "Spúšťať pri prihlásení do Windowsu" };
     readonly TextBox shortcut = new() { IsReadOnly = true };
     readonly CheckBox lightTheme = new() { Content = "Svetlá schéma" };
+    readonly CheckBox internalSpeech = new() { Content = "Interný model · OmniVoice" };
+    readonly ComboBox internalLanguage = new() { Height = 36 };
     readonly TextBlock notice = Ui.Text("", 12, Ui.Muted);
     readonly CancellationTokenSource lifetime = new();
     uint modifiers, virtualKey;
@@ -33,7 +35,7 @@ internal sealed class SettingsWindow : Window
         panel.Children.Add(Ui.Text("Text zo schránky. Pokojne, nahlas, po svojom.", 13, Ui.Muted));
         lightTheme.IsChecked = app.Preferences.LightTheme; lightTheme.Margin = new Thickness(0, 12, 0, 0); panel.Children.Add(lightTheme);
         lightTheme.Checked += (_, _) => Theme.Apply(true); lightTheme.Unchecked += (_, _) => Theme.Apply(false);
-        void Label(string value) { var label = Ui.Text(value, 12, Ui.Muted); label.Margin = new Thickness(0, 12, 0, 6); panel.Children.Add(label); }
+        TextBlock Label(string value) { var label = Ui.Text(value, 12, Ui.Muted); label.Margin = new Thickness(0, 12, 0, 6); panel.Children.Add(label); return label; }
         Label("OPENROUTER API KĽÚČ"); panel.Children.Add(key);
         key.Background = Theme.Brush("#101A29"); key.Foreground = Theme.Brush("#EDF4FF");
         try { key.Password = app.Preferences.ReadKey(); } catch (Exception ex) { preserveUnreadableKey = true; notice.Text = ex.Message; }
@@ -42,8 +44,22 @@ internal sealed class SettingsWindow : Window
             var dialog = new Microsoft.Win32.OpenFileDialog { Filter = "Súbor s kľúčom|*.api;*.key;*.txt|Všetky súbory|*.*" };
             if (dialog.ShowDialog(this) == true) { try { key.Password = File.ReadAllText(dialog.FileName).Trim().Trim('\uFEFF'); } catch (Exception ex) { notice.Text = ex.Message; } }
         }); import.HorizontalAlignment = HorizontalAlignment.Left; import.Margin = new Thickness(0, 8, 0, 0); panel.Children.Add(import);
-        Label("MODEL NA ČÍTANIE"); panel.Children.Add(speech);
-        Label("HLAS"); panel.Children.Add(voice);
+        internalSpeech.IsChecked = app.Preferences.InternalSpeech;
+        internalSpeech.Margin = new Thickness(0, 12, 0, 0); panel.Children.Add(internalSpeech);
+        var speechLabel = Label("MODEL NA ČÍTANIE · OPENROUTER"); panel.Children.Add(speech);
+        var voiceLabel = Label("HLAS"); panel.Children.Add(voice);
+        var internalPanel = new StackPanel(); panel.Children.Add(internalPanel);
+        var internalNote = Ui.Text("OmniVoice · automatický hlas · bez API kľúča. Jazyk čítania:", 12, Ui.Muted);
+        internalNote.Margin = new Thickness(0, 12, 0, 6); internalPanel.Children.Add(internalNote);
+        internalLanguage.Items.Add("Slovenčina"); internalLanguage.Items.Add("English");
+        internalLanguage.SelectedIndex = app.Preferences.InternalLanguage == "en" ? 1 : 0;
+        internalPanel.Children.Add(internalLanguage);
+        void ProviderChanged() {
+            bool useInternal = internalSpeech.IsChecked == true;
+            foreach (var item in new FrameworkElement[] { speechLabel, speech, voiceLabel, voice }) item.Visibility = useInternal ? Visibility.Collapsed : Visibility.Visible;
+            internalPanel.Visibility = useInternal ? Visibility.Visible : Visibility.Collapsed;
+        }
+        internalSpeech.Checked += (_, _) => ProviderChanged(); internalSpeech.Unchecked += (_, _) => ProviderChanged(); ProviderChanged();
         prepare.IsChecked = app.Preferences.PrepareText; prepare.Margin = new Thickness(0, 14, 0, 9); panel.Children.Add(prepare);
         panel.Children.Add(text); text.IsEnabled = prepare.IsChecked == true;
         prepare.Checked += (_, _) => text.IsEnabled = true; prepare.Unchecked += (_, _) => text.IsEnabled = false;
@@ -90,9 +106,9 @@ internal sealed class SettingsWindow : Window
     void Save()
     {
         try {
-            if (!speech.Text.Contains('/') || (prepare.IsChecked == true && !text.Text.Contains('/'))) throw new InvalidOperationException("Zadaj celé ID modelu: poskytovateľ/model.");
-            if (string.IsNullOrWhiteSpace(voice.Text)) throw new InvalidOperationException("Vyber alebo zadaj hlas.");
-            var next = app.Preferences with { LightTheme = lightTheme.IsChecked == true, SpeechModel = speech.Text.Trim(), TextModel = text.Text.Trim(), Voice = voice.Text.Trim(), PrepareText = prepare.IsChecked == true, AutoStart = startup.IsChecked == true, Modifiers = modifiers, Key = virtualKey };
+            if ((internalSpeech.IsChecked != true && !speech.Text.Contains('/')) || (prepare.IsChecked == true && !text.Text.Contains('/'))) throw new InvalidOperationException("Zadaj celé ID modelu: poskytovateľ/model.");
+            if (internalSpeech.IsChecked != true && string.IsNullOrWhiteSpace(voice.Text)) throw new InvalidOperationException("Vyber alebo zadaj hlas.");
+            var next = app.Preferences with { InternalSpeech = internalSpeech.IsChecked == true, InternalLanguage = internalLanguage.SelectedIndex == 1 ? "en" : "sk", LightTheme = lightTheme.IsChecked == true, SpeechModel = speech.Text.Trim(), TextModel = text.Text.Trim(), Voice = voice.Text.Trim(), PrepareText = prepare.IsChecked == true, AutoStart = startup.IsChecked == true, Modifiers = modifiers, Key = virtualKey };
             app.ApplySettings(next, preserveUnreadableKey ? null : key.Password); Close();
         } catch (Exception ex) { notice.Text = ex.Message; }
     }

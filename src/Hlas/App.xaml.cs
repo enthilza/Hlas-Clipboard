@@ -30,7 +30,7 @@ public partial class App : Application
     internal Api Api { get; }
     public App() => Api = new Api(usage: Usage);
     internal ReadingSession? Session { get; private set; }
-    internal string CostSummary => bills.Count == 0 ? "Pripravené na čítanie" : bills.All(b => !b.Cost.HasValue) ? "Cena: čakám na údaje" : "Cena: $" + bills.Where(b => b.Cost.HasValue).Sum(b => b.Cost!.Value).ToString("0.############################", CultureInfo.InvariantCulture) + (bills.Any(b => !b.Cost.HasValue) ? " + čakám na údaje" : "");
+    internal string CostSummary => bills.Count == 0 ? "Pripravené na čítanie" : bills.All(b => b.Provider != "OpenRouter") ? "Interný model · cena neposkytovaná" : bills.All(b => !b.Cost.HasValue) ? "Cena: čakám na údaje" : "Cena: $" + bills.Where(b => b.Cost.HasValue).Sum(b => b.Cost!.Value).ToString("0.############################", CultureInfo.InvariantCulture) + (bills.Any(b => !b.Cost.HasValue && b.Provider == "OpenRouter") ? " + čakám na údaje" : "");
     internal string CostDetails => string.Join("\n", bills.Select(b => $"{b.Kind}: {b.Model} · {(b.Cost.HasValue ? "$" + b.Cost.Value.ToString(CultureInfo.InvariantCulture) : "cena nedostupná")} · {b.Id ?? "bez ID"}"));
     protected override async void OnStartup(StartupEventArgs e)
     {
@@ -42,6 +42,7 @@ public partial class App : Application
             catch (Exception ex) { File.WriteAllText(e.Args[1], ex.ToString()); Shutdown(1); } return;
         }
         if (e.Args.Length == 2 && e.Args[0] == "--live-test") { Shutdown(await SelfTest.Live(e.Args[1])); return; }
+        if (e.Args.Length == 2 && e.Args[0] == "--internal-live-test") { Shutdown(await SelfTest.LiveInternal(e.Args[1])); return; }
         if (e.Args.Contains("--self-test")) { Shutdown(await SelfTest.Run(e.Args)); return; }
         mutex = new Mutex(true, @"Local\HlasClipboard.App", out bool first);
         if (!first) { try { using var signal = EventWaitHandle.OpenExisting(@"Local\HlasClipboard.Show"); signal.Set(); } catch { } Shutdown(); return; }
@@ -61,7 +62,7 @@ public partial class App : Application
         tray = new Forms.NotifyIcon { Text = "Hlas · " + Native.HotkeyText(Preferences.Modifiers, Preferences.Key), Icon = new System.Drawing.Icon(stream), ContextMenuStrip = menu, Visible = true };
         tray.DoubleClick += (_, _) => ShowPlayer();
         if (!registered) { ShowPlayer(); player.SetMessage("Skratka je obsadená", "Vyber inú kombináciu v nastaveniach."); OpenSettings(); }
-        else if (!File.Exists(Settings.KeyPath) && !e.Args.Contains("--tray")) OpenSettings();
+        else if (Preferences.RequiresOpenRouter && !File.Exists(Settings.KeyPath) && !e.Args.Contains("--tray")) OpenSettings();
         else if (!e.Args.Contains("--tray")) ShowPlayer();
         if (e.Args.Length == 2 && e.Args[0] == "--updated") Updates.CompleteStartup(e.Args[1]);
         _ = Task.Run(Updates.CleanOldJobs);
@@ -93,12 +94,12 @@ public partial class App : Application
             if (!Clipboard.ContainsText()) { player!.SetMessage("V schránke nie je text", "Skopíruj text a stlač skratku znova."); return; }
             text = Clipboard.GetText();
             if (string.IsNullOrWhiteSpace(text)) { player!.SetMessage("Schránka je prázdna", "Skopíruj text a stlač skratku znova."); return; }
-            key = Preferences.ReadKey();
-            if (string.IsNullOrWhiteSpace(key)) { player!.SetMessage("Chýba OpenRouter kľúč", "Zadaj API kľúč v nastaveniach."); OpenSettings(); return; }
+            key = Preferences.RequiresOpenRouter ? Preferences.ReadKey() : "";
+            if (Preferences.RequiresOpenRouter && string.IsNullOrWhiteSpace(key)) { player!.SetMessage("Chýba OpenRouter kľúč", Preferences.InternalSpeech ? "Príprava textu používa OpenRouter. Zadaj kľúč alebo prípravu vypni." : "Zadaj API kľúč v nastaveniach."); OpenSettings(); return; }
         } catch (Exception ex) { player!.SetMessage("Text sa nepodarilo načítať", ex.Message); return; }
         bills.Clear(); int run = ++billingRun;
         var session = new ReadingSession(Api, Preferences, key); Session = session;
-        session.Billed += bill => Dispatcher.BeginInvoke(() => { if (billingRun == run) bills.Add(bill); if (!bill.Cost.HasValue && bill.Id is not null) _ = FetchCost(bill, key); });
+        session.Billed += bill => Dispatcher.BeginInvoke(() => { if (billingRun == run) bills.Add(bill); if (bill.Provider == "OpenRouter" && !bill.Cost.HasValue && bill.Id is not null) _ = FetchCost(bill, key); });
         player!.Refresh();
         try { await session.Run(text); player.SetMessage("Dočítané", "Nový text načítaš skratkou " + Native.HotkeyText(Preferences.Modifiers, Preferences.Key) + "."); }
         catch (OperationCanceledException) { player.SetMessage("Zastavené", "Môžeš načítať nový text zo schránky."); }
@@ -122,7 +123,7 @@ public partial class App : Application
         string key;
         try { key = Preferences.ReadKey(); } catch { return; }
         if (string.IsNullOrWhiteSpace(key)) return;
-        foreach (var bill in Usage.Snapshot().Where(b => !b.Cost.HasValue && b.Id is not null).OrderByDescending(b => b.At).Take(100)) {
+        foreach (var bill in Usage.Snapshot().Where(b => b.Provider == "OpenRouter" && !b.Cost.HasValue && b.Id is not null).OrderByDescending(b => b.At).Take(100)) {
             token.ThrowIfCancellationRequested();
             try { bill.Cost = await Api.Cost(bill.Id!, key, token); if (bill.Cost.HasValue) Usage.Update(bill); }
             catch (OperationCanceledException) when (token.IsCancellationRequested) { return; }

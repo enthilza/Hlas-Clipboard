@@ -51,9 +51,11 @@ internal sealed class UsageView : StackPanel
         decimal Sum(Func<Bill, bool> predicate) => items.Where(b => b.Cost.HasValue && predicate(b)).Sum(b => b.Cost!.Value);
         total.Text = Money(Sum(_ => true));
         periods.Text = $"Dnes: {Money(Sum(b => b.At.LocalDateTime.Date == now.Date))}   ·   Tento mesiac: {Money(Sum(b => b.At.LocalDateTime.Year == now.Year && b.At.LocalDateTime.Month == now.Month))}";
-        int unknown = items.Count(b => !b.Cost.HasValue);
+        int unknown = items.Count(b => !b.Cost.HasValue && b.Provider == "OpenRouter");
+        int internalCalls = items.Count(b => b.Provider != "OpenRouter");
         detail.Text = $"{items.Length} volaní · Text {Money(Sum(b => b.Kind == "Text"))} · Audio {Money(Sum(b => b.Kind == "Audio"))}" +
             (unknown > 0 ? $"\n{unknown} volaní ešte nemá známu cenu a nie je započítaných. Neznáma cena neznamená nulu." : "\nVšetky zaznamenané ceny sú zahrnuté.") +
+            (internalCalls > 0 ? $"\nInterný model: {internalCalls} volaní bez cenových údajov, mimo súčtu." : "") +
             (app.Usage.Warning is null ? "" : "\n" + app.Usage.Warning);
         models.Children.Clear();
         foreach (var group in items.GroupBy(b => new { b.Kind, b.Model }).OrderByDescending(g => g.Where(b => b.Cost.HasValue).Sum(b => b.Cost!.Value))) {
@@ -61,6 +63,6 @@ internal sealed class UsageView : StackPanel
             row.Margin = new Thickness(0, 3, 0, 3); row.TextWrapping = TextWrapping.Wrap; models.Children.Add(row);
         }
         if (items.Length == 0) models.Children.Add(Ui.Text("Zatiaľ žiadne volania.", 12, Ui.Muted));
-        rows.ItemsSource = items.OrderByDescending(b => b.At).Take(100).Select(b => new { Time = b.At.LocalDateTime.ToString("dd.MM. HH:mm:ss"), b.Kind, b.Model, Cost = b.Cost.HasValue ? Money(b.Cost.Value) : "nezistená", State = b.Status }).ToArray();
+        rows.ItemsSource = items.OrderByDescending(b => b.At).Take(100).Select(b => new { Time = b.At.LocalDateTime.ToString("dd.MM. HH:mm:ss"), b.Kind, b.Model, Cost = b.Cost.HasValue ? Money(b.Cost.Value) : b.Provider != "OpenRouter" ? "interný · bez ceny" : "nezistená", State = b.Status }).ToArray();
     }
 }

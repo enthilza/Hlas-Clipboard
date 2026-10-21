@@ -2,7 +2,7 @@
  <PropertyGroup>
   <OutputType>WinExe</OutputType><TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
   <UseWPF>true</UseWPF><UseWindowsForms>true</UseWindowsForms><Nullable>enable</Nullable>
-  <ImplicitUsings>disable</ImplicitUsings><AssemblyName>Hlas</AssemblyName><Version>1.0.2</Version>
+  <ImplicitUsings>disable</ImplicitUsings><AssemblyName>Hlas</AssemblyName><Version>1.0.3</Version>
   <ApplicationIcon>Assets/Hlas.ico</ApplicationIcon><ApplicationManifest>app.manifest</ApplicationManifest>
   <PublishTrimmed>false</PublishTrimmed><DebugType>embedded</DebugType>
  </PropertyGroup>

@@ -26,9 +26,9 @@ internal sealed class UsageStore
         }
     }
     internal Bill[] Snapshot() { lock (gate) return entries.Select(b => b with { }).ToArray(); }
-    internal Bill Start(string kind, string model, int characters)
+    internal Bill Start(string kind, string model, int characters, string provider = "OpenRouter")
     {
-        var bill = new Bill(kind, model, null) { Characters = characters, Status = "Odoslané" };
+        var bill = new Bill(kind, model, null) { Characters = characters, Status = "Odoslané", Provider = provider };
         lock (gate) { entries.Add(bill); Save(); }
         return bill;
     }

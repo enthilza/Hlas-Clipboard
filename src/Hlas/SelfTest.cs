@@ -152,6 +152,7 @@ internal static class SelfTest
             int consumed = 0; var queue = new AudioQueue(() => consumed++); queue.Enqueue(new float[] { 1, 2 }); queue.Enqueue(new float[] { 3, 4 }); queue.Finish(); var samples = new float[10];
             Check(queue.Read(samples, 0, 10) == 4 && samples.Take(4).SequenceEqual(new float[] { 1, 2, 3, 4 }) && consumed == 2, "Audio chunks join without injected gaps and in order");
             await PipelineTests(Check);
+            await OmniVoiceTests.Run(Check, directory);
             UpdateTests.Run(Check, directory);
             UpdateTests.VerifyProgressUi(Check, directory, true);
             VerifyPlayerFrame(Check, skipped);
@@ -171,6 +172,9 @@ internal static class SelfTest
             var preferences = ((App)Application.Current).Preferences;
             bool originalLight = preferences.LightTheme; preferences.LightTheme = true;
             Render(new SettingsWindow((App)Application.Current), Path.Combine(directory, "settings-light-preview.png"), 760, Check);
+            bool originalInternal = preferences.InternalSpeech; preferences.InternalSpeech = true;
+            Render(new SettingsWindow((App)Application.Current), Path.Combine(directory, "settings-internal-preview.png"), 760, Check);
+            preferences.InternalSpeech = originalInternal;
             var lightUsage = new SettingsWindow((App)Application.Current); ((TabControl)lightUsage.Content).SelectedIndex = 1;
             SampleUsage(lightUsage);
             Render(lightUsage, Path.Combine(directory, "usage-light-preview.png"), 650, Check);
@@ -222,6 +226,18 @@ internal static class SelfTest
             try { await run.WaitAsync(TimeSpan.FromSeconds(5)); } catch (OperationCanceledException) { cancelled = true; }
             check(cancelled && fake.Spoken.Count == 1, "Cancellation during HTTP work exits promptly without retry");
         }
+    }
+    internal static async Task<int> LiveInternal(string report)
+    {
+        string? error = null; int frames = 0;
+        using var api = new Api();
+        try {
+            var audio = await api.Speak("Dobrý deň. Toto je krátka skúška interného hlasového modelu.", new Settings { InternalSpeech = true, PrepareText = false }, "", CancellationToken.None);
+            frames = AudioDecode.Decode(audio).Length;
+            File.WriteAllBytes(Path.ChangeExtension(report, ".mp3"), audio.Bytes);
+        } catch (Exception ex) { error = ex.Message; }
+        File.WriteAllText(report, JsonSerializer.Serialize(new { frames, seconds = frames / 24000d, error }));
+        return error is null && frames > 0 ? 0 : 1;
     }
     internal static async Task<int> Live(string report)
     {

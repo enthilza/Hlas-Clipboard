@@ -30,6 +30,7 @@ internal sealed record Bill(string Kind, string Model, string? Id)
     public DateTimeOffset At { get; init; } = DateTimeOffset.UtcNow;
     public int Characters { get; init; }
     public decimal? Cost { get; set; }
+    public string Provider { get; set; } = "OpenRouter";
     public string Status { get; set; } = "Hotovo";
 }
 internal sealed record AudioData(byte[] Bytes, string Extension, Bill Bill);
@@ -91,6 +92,7 @@ internal sealed class Api : IApi, IDisposable
     public async Task<AudioData> Speak(string input, Settings s, string key, CancellationToken token)
     {
         token.ThrowIfCancellationRequested();
+        if (s.InternalSpeech) return await SpeakInternal(input, s.InternalLanguage, token);
         var bill = usage?.Start("Audio", s.SpeechModel, input.Length) ?? new Bill("Audio", s.SpeechModel, null);
         try {
         bool pcm = s.SpeechModel.StartsWith("google/gemini-", StringComparison.Ordinal);
@@ -110,6 +112,47 @@ internal sealed class Api : IApi, IDisposable
             throw new InvalidOperationException("Server nevrátil rozpoznateľné MP3 audio.");
         bill.Status = "Hotovo"; return new(bytes, pcm ? "wav" : "mp3", bill);
         } catch (OperationCanceledException) { bill.Status = "Zrušené / časový limit"; throw; }
+        catch { bill.Status = "Chyba"; throw; }
+        finally { usage?.Update(bill); }
+    }
+    async Task<AudioData> SpeakInternal(string input, string language, CancellationToken token)
+    {
+        if (string.IsNullOrWhiteSpace(input) || input.Length > 5000) throw new InvalidOperationException("Interný model: text musí obsahovať 1 až 5000 znakov.");
+        if (language is not ("sk" or "en")) throw new InvalidOperationException("Interný model podporuje slovenčinu a angličtinu.");
+        var bill = usage?.Start("Audio", "internal/omnivoice", input.Length, "Interný model") ?? new Bill("Audio", "internal/omnivoice", null);
+        bill.Provider = "Interný model";
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(token);
+        timeout.CancelAfter(TimeSpan.FromSeconds(180));
+        try {
+            var baseUri = new Uri("https://ai.vaskop.me/transcribe/");
+            using var request = new HttpRequestMessage(HttpMethod.Post, new Uri(baseUri, "?mode=speech"));
+            request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+            request.Headers.Add("X-Requested-With", "fetch");
+            var form = new MultipartFormDataContent(); request.Content = form;
+            form.Add(new StringContent("speech"), "action");
+            form.Add(new StringContent(input, Encoding.UTF8), "text");
+            form.Add(new StringContent(language), "language");
+            using var response = await http.SendAsync(request, timeout.Token);
+            if (!response.IsSuccessStatusCode) throw new InvalidOperationException($"Interný model: požiadavka zlyhala (HTTP {(int)response.StatusCode}).");
+            using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync(timeout.Token));
+            var root = document.RootElement;
+            if (root.ValueKind != JsonValueKind.Object || !root.TryGetProperty("ok", out var ok) || ok.ValueKind != JsonValueKind.True)
+                throw new InvalidOperationException("Interný model oznámil zlyhanie prevodu.");
+            if (!root.TryGetProperty("audio", out var audio) || audio.ValueKind != JsonValueKind.Object || !audio.TryGetProperty("url", out var url) || url.ValueKind != JsonValueKind.String || string.IsNullOrWhiteSpace(url.GetString()))
+                throw new InvalidOperationException("Interný model nevrátil adresu audia.");
+            if (!Uri.TryCreate(baseUri, url.GetString(), out var audioUri) || audioUri.Scheme != baseUri.Scheme || audioUri.Host != baseUri.Host || audioUri.Port != baseUri.Port || audioUri.UserInfo.Length != 0)
+                throw new InvalidOperationException("Interný model vrátil nepovolenú adresu audia.");
+            using var download = await http.GetAsync(audioUri, timeout.Token);
+            if (!download.IsSuccessStatusCode) throw new InvalidOperationException($"Interný model: stiahnutie audia zlyhalo (HTTP {(int)download.StatusCode}).");
+            byte[] bytes = await download.Content.ReadAsByteArrayAsync(timeout.Token);
+            if (bytes.Length < 4 || !((bytes[0] == 'I' && bytes[1] == 'D' && bytes[2] == '3') || (bytes[0] == 255 && (bytes[1] & 224) == 224)))
+                throw new InvalidOperationException("Interný model nevrátil rozpoznateľné MP3 audio.");
+            bill.Status = "Hotovo"; return new(bytes, "mp3", bill);
+        } catch (OperationCanceledException) when (!token.IsCancellationRequested) {
+            bill.Status = "Časový limit"; throw new InvalidOperationException("Interný model neodpovedal do 180 sekúnd. Na OpenRouter neprepínam.");
+        } catch (OperationCanceledException) { bill.Status = "Zrušené"; throw; }
+        catch (JsonException ex) { bill.Status = "Chyba"; throw new InvalidOperationException("Interný model vrátil neplatný JSON.", ex); }
+        catch (HttpRequestException ex) { bill.Status = "Chyba"; throw new InvalidOperationException("Interný model nie je dostupný alebo zlyhalo spojenie.", ex); }
         catch { bill.Status = "Chyba"; throw; }
         finally { usage?.Update(bill); }
     }
