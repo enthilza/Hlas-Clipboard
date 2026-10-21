@@ -17,6 +17,26 @@ using NAudio.Wave;
 namespace Hlas;
 internal static class SelfTest
 {
+    [System.Runtime.InteropServices.DllImport("dwmapi.dll")]
+    static extern int DwmGetWindowAttribute(IntPtr window, int attribute, out int value, int size);
+
+    static void VerifyPlayerFrame(Action<bool, string> check, List<string> skipped)
+    {
+        var window = new PlayerWindow((App)Application.Current);
+        var handle = new System.Windows.Interop.WindowInteropHelper(window).EnsureHandle();
+        try {
+            foreach (bool light in new[] { false, true, false }) {
+                Theme.Apply(light);
+                int cornerResult = DwmGetWindowAttribute(handle, 33, out int corners, 4);
+                int borderResult = DwmGetWindowAttribute(handle, 34, out int border, 4);
+                if (cornerResult != 0 || borderResult != 0) { skipped.Add("DWM frame attributes unavailable on this Windows version"); return; }
+                check(corners == 1 && border == unchecked((int)0xFFFFFFFE), "Player has no DWM border or rounding after theme switch: " + (light ? "light" : "dark"));
+            }
+        } finally {
+            // Closing is normally intercepted to hide the player. Destroy this test HWND explicitly.
+            System.Windows.Interop.HwndSource.FromHwnd(handle)?.Dispose();
+        }
+    }
     sealed class Handler(Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> callback) : HttpMessageHandler
     {
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken token) => callback(request, token);
@@ -134,6 +154,7 @@ internal static class SelfTest
             await PipelineTests(Check);
             UpdateTests.Run(Check, directory);
             UpdateTests.VerifyProgressUi(Check, directory, true);
+            VerifyPlayerFrame(Check, skipped);
             Render(new PlayerWindow((App)Application.Current), Path.Combine(directory, "player-preview.png"), 460, Check);
             Theme.Apply(false);
             Render(new SettingsWindow((App)Application.Current), Path.Combine(directory, "settings-preview.png"), 760, Check);

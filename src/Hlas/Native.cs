@@ -16,6 +16,16 @@ internal static class Native
     internal static void ModernWindow(Window window)
     {
         var h = new WindowInteropHelper(window).Handle;
+        if (h == IntPtr.Zero) return;
+        if (window.AllowsTransparency || window.WindowStyle == WindowStyle.None)
+        {
+            // The layered player draws its own outline and shadow. DWM rounding
+            // otherwise frames the entire HWND, including the transparent margin.
+            int noRounding = 1, noBorderColor = unchecked((int)0xFFFFFFFE);
+            DwmSetWindowAttribute(h, 33, ref noRounding, 4);
+            DwmSetWindowAttribute(h, 34, ref noBorderColor, 4);
+            return;
+        }
         int dark = Theme.IsLight ? 0 : 1, round = 2;
         DwmSetWindowAttribute(h, 20, ref dark, 4); DwmSetWindowAttribute(h, 33, ref round, 4);
     }

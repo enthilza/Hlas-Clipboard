@@ -23,6 +23,7 @@ internal sealed class PlayerWindow : Window
         this.app = app;
         Title = "Hlas · prehrávač"; Width = 460; SizeToContent = SizeToContent.Height;
         WindowStyle = WindowStyle.None; AllowsTransparency = true; Background = Brushes.Transparent;
+        SourceInitialized += (_, _) => Native.ModernWindow(this);
         ResizeMode = ResizeMode.NoResize; ShowInTaskbar = false; Topmost = true; ShowActivated = false;
         var body = new StackPanel { Margin = new Thickness(22, 15, 22, 18) };
         var shell = new Border { Child = body, Margin = new Thickness(12), Background = Theme.Brush("#F2172131"), CornerRadius = new CornerRadius(18), BorderBrush = Theme.Brush("#445E7899"), BorderThickness = new Thickness(1), Effect = new DropShadowEffect { BlurRadius = 18, ShadowDepth = 4, Opacity = .35 } };
