@@ -29,7 +29,7 @@ internal sealed class UpdateProgressWindow : Window
         message = Ui.Text("Vyhľadávam novú verziu…", 14); message.TextWrapping = TextWrapping.Wrap;
         message.Margin = new Thickness(0, 14, 0, 0); panel.Children.Add(message);
         bar = new ProgressBar { Minimum = 0, Maximum = 100, IsIndeterminate = true, Height = 12,
-            Foreground = Ui.Accent, Background = Theme.Brush("#111A1E"), BorderThickness = new Thickness(0), Margin = new Thickness(0, 18, 0, 12) };
+            Foreground = Ui.Accent, Background = Theme.Brush("#101A29"), BorderThickness = new Thickness(0), Margin = new Thickness(0, 18, 0, 12) };
         System.Windows.Automation.AutomationProperties.SetName(bar, "Priebeh aktualizácie"); panel.Children.Add(bar);
         detail = Ui.Text("Prosím, počkaj…", 12, Ui.Muted); detail.TextWrapping = TextWrapping.Wrap; detail.MinHeight = 36; panel.Children.Add(detail);
         cancel = Ui.Button("Zrušiť", null, RequestCancel); cancel.HorizontalAlignment = HorizontalAlignment.Right;

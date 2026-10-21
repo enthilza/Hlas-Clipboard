@@ -49,6 +49,8 @@ internal static class SelfTest
     {
         var content = (FrameworkElement)window.Content; window.Content = null;
         var surface = new Border { Width = width, Background = window.Background, Child = content };
+        surface.SetValue(System.Windows.Documents.TextElement.FontFamilyProperty, window.FontFamily);
+        if (window is SettingsWindow) surface.Height = window.Height - 32;
         surface.Measure(new Size(width, double.PositiveInfinity)); surface.Arrange(new Rect(new Point(), surface.DesiredSize)); surface.UpdateLayout();
         var bitmap = new RenderTargetBitmap(width, (int)Math.Ceiling(surface.ActualHeight), 96, 96, PixelFormats.Pbgra32); bitmap.Render(surface);
         byte[] pixels = new byte[bitmap.PixelWidth * bitmap.PixelHeight * 4]; bitmap.CopyPixels(pixels, bitmap.PixelWidth * 4, 0);
@@ -133,9 +135,29 @@ internal static class SelfTest
             UpdateTests.Run(Check, directory);
             UpdateTests.VerifyProgressUi(Check, directory, true);
             Render(new PlayerWindow((App)Application.Current), Path.Combine(directory, "player-preview.png"), 460, Check);
-            Render(new SettingsWindow((App)Application.Current), Path.Combine(directory, "settings-preview.png"), 650, Check);
+            Theme.Apply(false);
+            Render(new SettingsWindow((App)Application.Current), Path.Combine(directory, "settings-preview.png"), 760, Check);
             var usageWindow = new SettingsWindow((App)Application.Current); ((TabControl)usageWindow.Content).SelectedIndex = 1;
+            void SampleUsage(Window window) {
+                var tab = (TabItem)((TabControl)window.Content).Items[1];
+                var view = (UsageView)((ScrollViewer)tab.Content).Content;
+                var grid = view.Children.OfType<DataGrid>().Single();
+                grid.ItemsSource = Enumerable.Range(1, 30).Select(i => new { Time = "21.10. 12:00:00", Kind = "Audio", Model = "Ukážka · model", Cost = "$0.001", State = "Ukážkový záznam" }).ToArray();
+            }
+            SampleUsage(usageWindow);
             Render(usageWindow, Path.Combine(directory, "usage-preview.png"), 650, Check);
+            Theme.Apply(true);
+            var preferences = ((App)Application.Current).Preferences;
+            bool originalLight = preferences.LightTheme; preferences.LightTheme = true;
+            Render(new SettingsWindow((App)Application.Current), Path.Combine(directory, "settings-light-preview.png"), 760, Check);
+            var lightUsage = new SettingsWindow((App)Application.Current); ((TabControl)lightUsage.Content).SelectedIndex = 1;
+            SampleUsage(lightUsage);
+            Render(lightUsage, Path.Combine(directory, "usage-light-preview.png"), 650, Check);
+            Render(new PlayerWindow((App)Application.Current), Path.Combine(directory, "player-light-preview.png"), 460, Check);
+            preferences.LightTheme = originalLight;
+            Theme.Apply(false);
+            var compact = new SettingsWindow((App)Application.Current) { Height = 560 };
+            Render(compact, Path.Combine(directory, "settings-compact-preview.png"), 720, Check);
             if (WaveOut.DeviceCount > 0) {
                 var done = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
                 using var device = new WaveOutEvent { Volume = 0 };

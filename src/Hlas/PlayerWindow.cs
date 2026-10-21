@@ -16,7 +16,7 @@ internal sealed class PlayerWindow : Window
     readonly TextBlock cost = Ui.Text("Pripravené", 11, Ui.Muted);
     readonly TextBlock position = Ui.Text("", 11, Ui.Muted);
     readonly Button pause, stop;
-    readonly ProgressBar progress = new() { Height = 3, Minimum = 0, Maximum = 100, Foreground = Ui.Accent, Background = Theme.Brush("#111A1E"), BorderThickness = new Thickness(0), Margin = new Thickness(0, 14, 0, 14) };
+    readonly ProgressBar progress = new() { Height = 3, Minimum = 0, Maximum = 100, Foreground = Ui.Accent, Background = Theme.Brush("#101A29"), BorderThickness = new Thickness(0), Margin = new Thickness(0, 14, 0, 14) };
     readonly DispatcherTimer timer = new() { Interval = TimeSpan.FromMilliseconds(200) };
     internal PlayerWindow(App app)
     {
@@ -25,10 +25,12 @@ internal sealed class PlayerWindow : Window
         WindowStyle = WindowStyle.None; AllowsTransparency = true; Background = Brushes.Transparent;
         ResizeMode = ResizeMode.NoResize; ShowInTaskbar = false; Topmost = true; ShowActivated = false;
         var body = new StackPanel { Margin = new Thickness(22, 15, 22, 18) };
-        var shell = new Border { Child = body, Margin = new Thickness(12), Background = new SolidColorBrush(Color.FromArgb(242, 24, 34, 38)), CornerRadius = new CornerRadius(18), BorderBrush = Ui.Brush("#445E6F69"), BorderThickness = new Thickness(1), Effect = new DropShadowEffect { BlurRadius = 18, ShadowDepth = 4, Opacity = .35 } };
+        var shell = new Border { Child = body, Margin = new Thickness(12), Background = Theme.Brush("#F2172131"), CornerRadius = new CornerRadius(18), BorderBrush = Theme.Brush("#445E7899"), BorderThickness = new Thickness(1), Effect = new DropShadowEffect { BlurRadius = 18, ShadowDepth = 4, Opacity = .35 } };
         Content = shell;
-        var header = new DockPanel { Margin = new Thickness(0, 0, 0, 18), LastChildFill = true };
-        header.MouseLeftButtonDown += (_, e) => { if (e.LeftButton == MouseButtonState.Pressed) DragMove(); };
+        shell.MouseLeftButtonDown += (_, e) => {
+            if (e.LeftButton == MouseButtonState.Pressed && e.GetPosition(shell).Y <= 60) { DragMove(); e.Handled = true; }
+        };
+        var header = new DockPanel { Background = Brushes.Transparent, Margin = new Thickness(0, 0, 0, 18), LastChildFill = true };
         var controls = new StackPanel { Orientation = Orientation.Horizontal }; DockPanel.SetDock(controls, Dock.Right); header.Children.Add(controls);
         void Small(string text, string icon, Action action) { var b = Ui.Button("", icon, action); b.ToolTip = text; b.Padding = new Thickness(6); b.MinHeight = 27; b.Width = 30; b.Margin = new Thickness(3, 0, 0, 0); controls.Children.Add(b); }
         Small("Nastavenia", "settings", app.OpenSettings);

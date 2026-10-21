@@ -15,6 +15,7 @@ internal sealed class SettingsWindow : Window
     readonly ComboBox speech = new() { IsEditable = true }, text = new() { IsEditable = true }, voice = new() { IsEditable = true };
     readonly CheckBox prepare = new() { Content = "Pred čítaním upraviť text na hovorenú reč" }, startup = new() { Content = "Spúšťať pri prihlásení do Windowsu" };
     readonly TextBox shortcut = new() { IsReadOnly = true };
+    readonly CheckBox lightTheme = new() { Content = "Svetlá schéma" };
     readonly TextBlock notice = Ui.Text("", 12, Ui.Muted);
     readonly CancellationTokenSource lifetime = new();
     uint modifiers, virtualKey;
@@ -22,17 +23,19 @@ internal sealed class SettingsWindow : Window
     bool preserveUnreadableKey;
     internal SettingsWindow(App app)
     {
-        this.app = app; Ui.SetupDialog(this, "Hlas · nastavenia", 650); MaxHeight = SystemParameters.WorkArea.Height - 35; ShowInTaskbar = true;
-        var panel = new StackPanel { Margin = new Thickness(30) };
-        var tabs = new TabControl { Background = Theme.Brush("#202B30"), BorderThickness = new Thickness(0) };
-        tabs.Items.Add(new TabItem { Header = "Nastavenia", Content = new ScrollViewer { Content = panel, VerticalScrollBarVisibility = ScrollBarVisibility.Auto } });
+        this.app = app; Ui.SetupDialog(this, "Hlas · nastavenia", Math.Min(760, SystemParameters.WorkArea.Width - 24)); MaxHeight = SystemParameters.WorkArea.Height - 24; ShowInTaskbar = true;
+        var panel = new StackPanel { Margin = new Thickness(24, 16, 24, 20), Width = 740 };
+        var tabs = new TabControl { Background = Theme.Brush("#202B3B"), BorderThickness = new Thickness(0) };
+        tabs.Items.Add(new TabItem { Header = "Nastavenia", Content = new System.Windows.Controls.Viewbox { Child = panel, Stretch = System.Windows.Media.Stretch.Uniform, StretchDirection = StretchDirection.DownOnly, VerticalAlignment = VerticalAlignment.Top } });
         tabs.Items.Add(new TabItem { Header = "Použitie a ceny", Content = new ScrollViewer { Content = new UsageView(app, lifetime.Token), VerticalScrollBarVisibility = ScrollBarVisibility.Auto } });
-        Content = tabs; SizeToContent = SizeToContent.Manual; Height = Math.Min(860, SystemParameters.WorkArea.Height - 35);
+        Content = tabs; SizeToContent = SizeToContent.Manual; Height = Math.Min(780, SystemParameters.WorkArea.Height - 24);
         var heading = new DockPanel(); var update = Ui.Button("Aktualizovať", "update", () => _ = app.Update()); DockPanel.SetDock(update, Dock.Right); heading.Children.Add(update); heading.Children.Add(Ui.Heading("Hlas · nastavenia")); panel.Children.Add(heading);
         panel.Children.Add(Ui.Text("Text zo schránky. Pokojne, nahlas, po svojom.", 13, Ui.Muted));
-        void Label(string value) { var label = Ui.Text(value, 12, Ui.Muted); label.Margin = new Thickness(0, 20, 0, 7); panel.Children.Add(label); }
+        lightTheme.IsChecked = app.Preferences.LightTheme; lightTheme.Margin = new Thickness(0, 12, 0, 0); panel.Children.Add(lightTheme);
+        lightTheme.Checked += (_, _) => Theme.Apply(true); lightTheme.Unchecked += (_, _) => Theme.Apply(false);
+        void Label(string value) { var label = Ui.Text(value, 12, Ui.Muted); label.Margin = new Thickness(0, 12, 0, 6); panel.Children.Add(label); }
         Label("OPENROUTER API KĽÚČ"); panel.Children.Add(key);
-        key.Background = Theme.Brush("#111A1E"); key.Foreground = Theme.Brush("#EDF3F3");
+        key.Background = Theme.Brush("#101A29"); key.Foreground = Theme.Brush("#EDF4FF");
         try { key.Password = app.Preferences.ReadKey(); } catch (Exception ex) { preserveUnreadableKey = true; notice.Text = ex.Message; }
         key.PasswordChanged += (_, _) => preserveUnreadableKey = false;
         var import = Ui.Button("Načítať kľúč zo súboru…", "folder", () => {
@@ -41,7 +44,7 @@ internal sealed class SettingsWindow : Window
         }); import.HorizontalAlignment = HorizontalAlignment.Left; import.Margin = new Thickness(0, 8, 0, 0); panel.Children.Add(import);
         Label("MODEL NA ČÍTANIE"); panel.Children.Add(speech);
         Label("HLAS"); panel.Children.Add(voice);
-        prepare.IsChecked = app.Preferences.PrepareText; prepare.Margin = new Thickness(0, 24, 0, 9); panel.Children.Add(prepare);
+        prepare.IsChecked = app.Preferences.PrepareText; prepare.Margin = new Thickness(0, 14, 0, 9); panel.Children.Add(prepare);
         panel.Children.Add(text); text.IsEnabled = prepare.IsChecked == true;
         prepare.Checked += (_, _) => text.IsEnabled = true; prepare.Unchecked += (_, _) => text.IsEnabled = false;
         var explanation = Ui.Text("Úprava odstráni formátovanie a nahradí kód či zložité vzorce krátkou poznámkou. Text sa odosiela vybraným modelom cez OpenRouter.", 12, Ui.Muted); explanation.TextWrapping = TextWrapping.Wrap; explanation.Margin = new Thickness(0, 8, 0, 0); panel.Children.Add(explanation);
@@ -64,11 +67,11 @@ internal sealed class SettingsWindow : Window
             if (Native.ValidHotkey(m, v)) { modifiers = m; virtualKey = v; shortcut.Text = Native.HotkeyText(m, v); }
         };
         startup.IsChecked = app.Preferences.AutoStart; startup.Margin = new Thickness(0, 18, 0, 0); panel.Children.Add(startup);
-        notice.TextWrapping = TextWrapping.Wrap; notice.Margin = new Thickness(0, 16, 0, 16); panel.Children.Add(notice);
+        notice.TextWrapping = TextWrapping.Wrap; notice.Margin = new Thickness(0, 8, 0, 8); panel.Children.Add(notice);
         var bottom = new DockPanel(); var buttons = new StackPanel { Orientation = Orientation.Horizontal }; DockPanel.SetDock(buttons, Dock.Right); bottom.Children.Add(buttons);
         var cancel = Ui.Button("Zavrieť", null, Close); cancel.Margin = new Thickness(0, 0, 10, 0); buttons.Children.Add(cancel); buttons.Children.Add(Ui.Button("Uložiť nastavenia", null, Save, true));
         bottom.Children.Add(Ui.Text("Verzia " + Updates.CurrentVersion.ToString(3), 11, Ui.Muted)); panel.Children.Add(bottom);
-        Closed += (_, _) => { lifetime.Cancel(); lifetime.Dispose(); key.Clear(); };
+        Closed += (_, _) => { Theme.Apply(app.Preferences.LightTheme); lifetime.Cancel(); lifetime.Dispose(); key.Clear(); };
     }
     void Populate()
     {
@@ -89,7 +92,7 @@ internal sealed class SettingsWindow : Window
         try {
             if (!speech.Text.Contains('/') || (prepare.IsChecked == true && !text.Text.Contains('/'))) throw new InvalidOperationException("Zadaj celé ID modelu: poskytovateľ/model.");
             if (string.IsNullOrWhiteSpace(voice.Text)) throw new InvalidOperationException("Vyber alebo zadaj hlas.");
-            var next = app.Preferences with { SpeechModel = speech.Text.Trim(), TextModel = text.Text.Trim(), Voice = voice.Text.Trim(), PrepareText = prepare.IsChecked == true, AutoStart = startup.IsChecked == true, Modifiers = modifiers, Key = virtualKey };
+            var next = app.Preferences with { LightTheme = lightTheme.IsChecked == true, SpeechModel = speech.Text.Trim(), TextModel = text.Text.Trim(), Voice = voice.Text.Trim(), PrepareText = prepare.IsChecked == true, AutoStart = startup.IsChecked == true, Modifiers = modifiers, Key = virtualKey };
             app.ApplySettings(next, preserveUnreadableKey ? null : key.Password); Close();
         } catch (Exception ex) { notice.Text = ex.Message; }
     }

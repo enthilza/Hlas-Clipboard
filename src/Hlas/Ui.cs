@@ -11,7 +11,7 @@ namespace Hlas;
 internal static class Ui
 {
     public static SolidColorBrush Brush(string hex) { var b = new SolidColorBrush((Color)ColorConverter.ConvertFromString(hex)); b.Freeze(); return b; }
-    public static readonly Brush Accent = Theme.Brush("#91EFD3"), Muted = Theme.Brush("#A4B5BB"), Panel = Theme.Brush("#202B30");
+    public static readonly Brush Accent = Theme.Brush("#83BFFF"), Muted = Theme.Brush("#A7B8CD"), Panel = Theme.Brush("#202B3B");
     public static ImageSource Logo
     {
         get
@@ -60,29 +60,29 @@ internal static class Ui
     };
     public static FrameworkElement Icon(string name, Brush? color = null, double size = 18)
     {
-        var path = new Path { Data = Geometry.Parse(Icons.GetValueOrDefault(name, Icons["image"])), Stroke = color ?? Theme.Brush("#CCD9DD"), StrokeThickness = 1.6, StrokeStartLineCap = PenLineCap.Round, StrokeEndLineCap = PenLineCap.Round, StrokeLineJoin = PenLineJoin.Round };
+        var path = new Path { Data = Geometry.Parse(Icons.GetValueOrDefault(name, Icons["image"])), Stroke = color ?? Theme.Brush("#CCDCEE"), StrokeThickness = 1.6, StrokeStartLineCap = PenLineCap.Round, StrokeEndLineCap = PenLineCap.Round, StrokeLineJoin = PenLineJoin.Round };
         var canvas = new Canvas { Width = 24, Height = 24 }; canvas.Children.Add(path);
         return new Viewbox { Child = canvas, Width = size, Height = size, Stretch = Stretch.Uniform };
     }
-    public static TextBlock Text(string text, double size = 13, Brush? color = null) => new() { Text = text, FontSize = size, Foreground = color ?? Theme.Brush("#EDF3F3"), VerticalAlignment = VerticalAlignment.Center };
+    public static TextBlock Text(string text, double size = 13, Brush? color = null) => new() { Text = text, FontSize = size, Foreground = color ?? Theme.Brush("#EDF4FF"), VerticalAlignment = VerticalAlignment.Center };
     public static Button Button(string text, string? icon, Action click, bool primary = false)
     {
         var row = new StackPanel { Orientation = Orientation.Horizontal };
-        var foreground = primary ? Theme.Brush("#13382D") : Theme.Brush("#E8F0F1");
+        var foreground = primary ? Theme.Brush("#102C4C") : Theme.Brush("#E8F1FF");
         if (icon != null) { var i = Icon(icon, foreground); i.Margin = new Thickness(0, 0, string.IsNullOrEmpty(text) ? 0 : 8, 0); row.Children.Add(i); }
         if (!string.IsNullOrEmpty(text)) row.Children.Add(Text(text, 12, foreground));
         var b = new Button { Content = row };
-        if (primary) { b.Background = Accent; b.BorderThickness = new Thickness(0); }
+        if (primary) { b.Foreground = foreground; b.Background = Accent; b.BorderThickness = new Thickness(0); }
         b.Click += (_, _) => click();
         System.Windows.Automation.AutomationProperties.SetName(b, string.IsNullOrEmpty(text) ? icon ?? "" : text);
         return b;
     }
-    public static Border Card(UIElement child, Thickness padding, string color = "#202B30") => new() { Child = child, Padding = padding, Background = Theme.Brush(color), CornerRadius = new CornerRadius(12), BorderBrush = Theme.Brush("#16FFFFFF"), BorderThickness = new Thickness(1) };
+    public static Border Card(UIElement child, Thickness padding, string color = "#202B3B") => new() { Child = child, Padding = padding, Background = Theme.Brush(color), CornerRadius = new CornerRadius(12), BorderBrush = Theme.Brush("#16FFFFFF"), BorderThickness = new Thickness(1) };
     public static FormattedText Formatted(string text, double size, Brush brush) => new(text, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface("Segoe UI"), size, brush, 1);
     public static void SetupDialog(Window window, string title, double width = 490)
     {
         window.Title = title; window.Width = width; window.SizeToContent = SizeToContent.Height; window.ResizeMode = ResizeMode.NoResize; window.WindowStartupLocation = WindowStartupLocation.CenterOwner;
-        window.Background = Theme.Brush("#202B30"); window.Icon = new System.Windows.Media.Imaging.BitmapImage(new Uri("pack://application:,,,/Assets/Hlas.ico"));
+        window.Background = Theme.Brush("#202B3B"); window.Icon = new System.Windows.Media.Imaging.BitmapImage(new Uri("pack://application:,,,/Assets/Hlas.ico"));
         window.SourceInitialized += (_, _) => Native.ModernWindow(window);
     }
     public static TextBlock Heading(string text) => new() { Text = text, FontSize = 22, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 8) };

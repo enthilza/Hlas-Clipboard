@@ -8,7 +8,7 @@ Spusti `dist\Hlas.exe`. Aplikácia zostane pri hodinách. Skopíruj text a stla�
 
 Počas prípravy, prehrávania aj pauzy skratka iba pípne. **Pauza** pozastaví zvuk, príprava pokračuje do naplnenia zásoby troch častí. **Zastaviť** zruší čítanie aj ďalšie požiadavky. Už odoslané volania môžu byť účtované. Po dohraní alebo zastavení možno načítať nový text.
 
-Prehrávač je presúvateľný, jemne priehľadný a nad ostatnými oknami. Pri skratke nepreberá fokus. Krížik ho iba skryje, zvuk pokračuje. Znova ho otvoríš dvojklikom na ikonu pri hodinách. Rýchlosť 0,5–2× sa mení priebežne bez opakovania textu a bez zmeny výšky hlasu. Pripravené časti sa spájajú v jednom zvukovom prúde; pri pomalej službe sa zobrazí čakanie a prehrávanie pokračuje, keď príde ďalšia časť.
+Aplikácia má modré ladenie. V nastaveniach možno zapnúť svetlú schému s okamžitým náhľadom; voľbu potvrdíš tlačidlom Uložiť nastavenia. Nastavenia sa zmestia bez posuvníka, na menšej obrazovke sa rozloženie zmenší. Posuvníky v prehľade použitia sú zladené so schémou. Prehrávač je presúvateľný za voľnú plochu celej hornej časti, jemne priehľadný a nad ostatnými oknami. Pri skratke nepreberá fokus. Krížik ho iba skryje, zvuk pokračuje. Znova ho otvoríš dvojklikom na ikonu pri hodinách. Rýchlosť 0,5–2× sa mení priebežne bez opakovania textu a bez zmeny výšky hlasu. Pripravené časti sa spájajú v jednom zvukovom prúde; pri pomalej službe sa zobrazí čakanie a prehrávanie pokračuje, keď príde ďalšia časť.
 
 ## Nastavenia a prenos
 

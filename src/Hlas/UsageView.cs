@@ -33,9 +33,9 @@ internal sealed class UsageView : StackPanel
         var recentHeading = Ui.Text("POSLEDNÝCH 100 VOLANÍ", 11, Ui.Muted); recentHeading.Margin = new Thickness(0, 20, 0, 8); Children.Add(recentHeading);
         rows.AutoGenerateColumns = false; rows.IsReadOnly = true; rows.CanUserAddRows = false; rows.CanUserDeleteRows = false;
         rows.HeadersVisibility = DataGridHeadersVisibility.Column; rows.GridLinesVisibility = DataGridGridLinesVisibility.None;
-        rows.Background = Theme.Brush("#182226"); rows.RowBackground = Theme.Brush("#202B30"); rows.AlternatingRowBackground = Theme.Brush("#182226"); rows.Foreground = Theme.Brush("#EDF3F3"); rows.BorderThickness = new Thickness(0);
+        rows.Background = Theme.Brush("#172131"); rows.RowBackground = Theme.Brush("#202B3B"); rows.AlternatingRowBackground = Theme.Brush("#172131"); rows.Foreground = Theme.Brush("#EDF4FF"); rows.BorderThickness = new Thickness(0);
         rows.Height = 250; rows.RowHeight = 31; rows.FontSize = 11;
-        var header = new Style(typeof(DataGridColumnHeader)); header.Setters.Add(new Setter(Control.BackgroundProperty, Theme.Brush("#283E3A"))); header.Setters.Add(new Setter(Control.ForegroundProperty, Theme.Brush("#EDF3F3"))); header.Setters.Add(new Setter(Control.PaddingProperty, new Thickness(7))); rows.ColumnHeaderStyle = header;
+        var header = new Style(typeof(DataGridColumnHeader)); header.Setters.Add(new Setter(Control.BackgroundProperty, new DynamicResourceExtension("Selected"))); header.Setters.Add(new Setter(Control.ForegroundProperty, new DynamicResourceExtension("Text"))); header.Setters.Add(new Setter(Control.PaddingProperty, new Thickness(7))); rows.ColumnHeaderStyle = header;
         void Column(string label, string field, double width) => rows.Columns.Add(new DataGridTextColumn { Header = label, Binding = new Binding(field), Width = width });
         Column("Kedy", "Time", 115); Column("Typ", "Kind", 50); Column("Model", "Model", 190); Column("Cena USD", "Cost", 125); Column("Stav", "State", 140);
         Children.Add(rows);

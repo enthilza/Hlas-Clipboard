@@ -34,7 +34,7 @@ public partial class App : Application
     internal string CostDetails => string.Join("\n", bills.Select(b => $"{b.Kind}: {b.Model} · {(b.Cost.HasValue ? "$" + b.Cost.Value.ToString(CultureInfo.InvariantCulture) : "cena nedostupná")} · {b.Id ?? "bez ID"}"));
     protected override async void OnStartup(StartupEventArgs e)
     {
-        base.OnStartup(e); Theme.Apply(false);
+        base.OnStartup(e); Theme.Apply(Preferences.LightTheme);
         if (e.Args.Length == 2 && e.Args[0] == "--apply-update") { Shutdown(await Updates.ApplyAsync(e.Args[1])); return; }
         if (e.Args.Length == 2 && e.Args[0] == "--verify-package") { try { Updates.VerifyReleaseDirectory(e.Args[1]); Shutdown(0); } catch { Shutdown(1); } return; }
         if (e.Args.Length == 2 && e.Args[0] == "--check-update") {
@@ -80,6 +80,7 @@ public partial class App : Application
         try { if (apiKey is not null) next.SetKey(apiKey); Settings.SetAutoStart(next.AutoStart); next.Save(); }
         catch { hotkeys.Apply(previous.Modifiers, previous.Key); try { Settings.SetAutoStart(previous.AutoStart); } catch { } throw; }
         Preferences = next;
+        Theme.Apply(next.LightTheme);
         if (tray is not null) tray.Text = "Hlas · " + Native.HotkeyText(next.Modifiers, next.Key);
         if (Session is null) player?.SetMessage("Text, ktorý môžeš počúvať.", "Skopíruj text a stlač " + Native.HotkeyText(next.Modifiers, next.Key) + ".");
     }
